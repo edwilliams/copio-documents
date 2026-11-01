@@ -8,3 +8,5 @@ docs/strategy/
 # Synced vendor type declarations (source of truth in types/vendor/)
 js/lib/*.d.ts
 js/lib/*.d.mts
+# Local Netlify folder
+.netlify
