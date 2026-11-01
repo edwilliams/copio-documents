@@ -1,4 +1,4 @@
-# Copio
+# Copio Documents
 
 <div align="center">
   <img style="margin: 0 auto; max-width: 512px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);" src="https://substackcdn.com/image/fetch/w_1456,c_limit,f_webp,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4eb7cf55-5d05-497a-8745-9002f292c32a_512x512.png" alt="Copio Logo" />
@@ -124,8 +124,8 @@ Copio is designed with a lightweight, zero-framework-overhead philosophy for max
 
 ```bash
 # Clone the repository
-git clone https://github.com/edwilliams/copio.git
-cd copio
+git clone https://github.com/edwilliams/copio-documents.git
+cd copio-documents
 
 # Install build dependencies
 npm install
