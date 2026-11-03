@@ -41,7 +41,7 @@ export class CopioAddEditDialog extends LitElement {
     this.#scannerInitialized = true;
   };
 
-  #applyScannedPages = (scannedPages) => {
+  #applyScannedPages = (scannedPages, { silent = false } = {}) => {
     const copioImages = this.querySelector('copio-images');
     const scannerHost = this.querySelector('.modal-scanner-host');
     const toggleBtn = this.querySelector('.btn-toggle-scanner');
@@ -86,7 +86,9 @@ export class CopioAddEditDialog extends LitElement {
       this.#clearValidation();
     }
 
-    notify.success(`✓ Scan complete (${(copioImages?.images || []).length} page${(copioImages?.images || []).length !== 1 ? 's' : ''})`);
+    if (!silent) {
+      notify.success(`✓ Scan complete (${(copioImages?.images || []).length} page${(copioImages?.images || []).length !== 1 ? 's' : ''})`);
+    }
   };
 
   #showScanner = () => {
@@ -257,6 +259,12 @@ export class CopioAddEditDialog extends LitElement {
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const nameError = this.querySelector('.dialog-name-error');
     const copioImages = this.querySelector('copio-images');
+    const scannerHost = this.querySelector('.modal-scanner-host');
+
+    // If scanner was active and has draft pages not yet completed, apply them now
+    if (this.#scannerDraftPages.length > 0 && scannerHost && scannerHost.style.display !== 'none') {
+      this.#applyScannedPages(this.#scannerDraftPages, { silent: true });
+    }
 
     const name = inputName?.value?.trim();
     if (!name) {

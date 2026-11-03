@@ -217,4 +217,76 @@ describe('Copio Scanner Batch Mode Integration', () => {
     expect(scanner.getAttribute('mode')).to.equal('batch');
     expect(scanner.getAttribute('aspect')).to.equal('a4');
   });
+
+  it('does not create ghost "Scanned Document" in store while scanning and preserves saved doc "foo"', async () => {
+    const app = document.createElement('copio-app');
+    fixture.appendChild(app);
+    await app.updateComplete;
+
+    router.navigate('/add');
+    await new Promise((r) => setTimeout(r, 50));
+    await app.updateComplete;
+
+    const dialog = app.querySelector('copio-add-edit-dialog');
+    const scanner = dialog.querySelector('copio-scanner');
+    const inputName = dialog.querySelector('.dialog-add-edit-input-name');
+
+    // Simulate scanning pages into scanner
+    const testPages = [
+      {
+        id: 'p_batch_1',
+        label: 'Receipt Page 1',
+        src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        originalSrc: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        edits: { crop: null, rotation: 0, filter: 'none' },
+      },
+    ];
+
+    scanner.dispatchEvent(
+      new CustomEvent('copio:pages-changed', {
+        bubbles: true,
+        composed: true,
+        detail: { pages: testPages, docId: scanner.docId },
+      }),
+    );
+
+    // Verify no ghost "Scanned Document" was injected into the app store
+    expect(Object.keys(store.getTable('docs'))).to.have.lengthOf(0);
+
+    // Complete scan
+    scanner.dispatchEvent(
+      new CustomEvent('copio:scan-complete', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          mode: 'batch',
+          aspect: 'a4',
+          pageCount: 1,
+          pages: testPages,
+        },
+      }),
+    );
+
+    // User types "foo" as doc name
+    inputName.value = 'foo';
+
+    const saveBtn = dialog.querySelector('.dialog-add-edit-savebtn');
+    saveBtn.click();
+
+    await new Promise((r) => setTimeout(r, 150));
+    await app.updateComplete;
+
+    // Verify "foo" is saved in store and no "Scanned Document" exists
+    const docs = store.getTable('docs');
+    const docEntries = Object.entries(docs);
+    expect(docEntries).to.have.lengthOf(1);
+    const [savedId, docData] = docEntries[0];
+    expect(docData.name).to.equal('foo');
+    expect(JSON.parse(docData.pages)).to.have.lengthOf(1);
+
+    // Verify after another tick and storage persister cycles that "foo" is NOT deleted
+    await new Promise((r) => setTimeout(r, 150));
+    expect(store.getTable('docs')[savedId]).to.exist;
+    expect(store.getTable('docs')[savedId].name).to.equal('foo');
+  });
 });
