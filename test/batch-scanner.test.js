@@ -88,18 +88,116 @@ describe('Copio Scanner Batch Mode Integration', () => {
     expect(inputName.value).to.include('Scan ');
   });
 
-  it('renders Scan Document triggers in copio-app empty state and FAB', async () => {
+  it('renders a single Add Document button in empty state and single plus button in FAB', async () => {
     const app = document.createElement('copio-app');
     fixture.appendChild(app);
     await app.updateComplete;
 
-    const emptyScanBtn = app.querySelector('.empty-state sl-button[variant="primary"]');
-    expect(emptyScanBtn).to.exist;
-    expect(emptyScanBtn.textContent).to.include('Scan Document');
+    const emptyButtons = app.querySelectorAll('.empty-state sl-button');
+    expect(emptyButtons).to.have.lengthOf(1);
+    expect(emptyButtons[0].textContent).to.include('Add Document');
 
-    const fabScanBtn = app.querySelector('.dialog-scan-btn');
-    expect(fabScanBtn).to.exist;
-    expect(fabScanBtn.getAttribute('label')).to.equal('Scan Document');
+    const fabButtons = app.querySelectorAll('.copio-fab-wrap sl-icon-button');
+    expect(fabButtons).to.have.lengthOf(1);
+    expect(fabButtons[0].classList.contains('dialog-add-edit-btn')).to.be.true;
+    expect(app.querySelector('.dialog-scan-btn')).to.not.exist;
+  });
+
+  it('hides scanner and reveals copio-images on copio:scan-complete', async () => {
+    const dialog = document.createElement('copio-add-edit-dialog');
+    fixture.appendChild(dialog);
+    await dialog.updateComplete;
+    await dialog.open();
+
+    const scanner = dialog.querySelector('copio-scanner');
+    const scannerHost = dialog.querySelector('.modal-scanner-host');
+    const copioImages = dialog.querySelector('copio-images');
+    const toggleBtn = dialog.querySelector('.btn-toggle-scanner');
+
+    expect(scannerHost.style.display).to.equal('block');
+    expect(copioImages.style.display).to.equal('none');
+    expect(toggleBtn.style.display).to.equal('none');
+
+    const testPages = [
+      {
+        id: 'scan_p1',
+        label: 'Page 1',
+        src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        originalSrc: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        edits: { crop: null, rotation: 0, filter: 'none' },
+      },
+    ];
+
+    scanner.dispatchEvent(
+      new CustomEvent('copio:scan-complete', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          mode: 'batch',
+          aspect: 'a4',
+          pageCount: 1,
+          pages: testPages,
+        },
+      }),
+    );
+
+    await dialog.updateComplete;
+
+    expect(scannerHost.style.display).to.equal('none');
+    expect(copioImages.style.display).to.equal('block');
+    expect(toggleBtn.style.display).to.equal('inline-flex');
+    expect(copioImages.images).to.have.lengthOf(1);
+  });
+
+  it('saves scanned document with pages correctly', async () => {
+    const app = document.createElement('copio-app');
+    fixture.appendChild(app);
+    await app.updateComplete;
+
+    router.navigate('/add');
+    await new Promise((r) => setTimeout(r, 50));
+    await app.updateComplete;
+
+    const dialog = app.querySelector('copio-add-edit-dialog');
+    const scanner = dialog.querySelector('copio-scanner');
+
+    const testPages = [
+      {
+        id: 'p_save_1',
+        label: 'Doc Page 1',
+        src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        originalSrc: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        edits: { crop: null, rotation: 0, filter: 'none' },
+      },
+    ];
+
+    scanner.dispatchEvent(
+      new CustomEvent('copio:scan-complete', {
+        bubbles: true,
+        composed: true,
+        detail: {
+          mode: 'batch',
+          aspect: 'a4',
+          pageCount: 1,
+          pages: testPages,
+        },
+      }),
+    );
+
+    const saveBtn = dialog.querySelector('.dialog-add-edit-savebtn');
+    saveBtn.click();
+
+    await new Promise((r) => setTimeout(r, 100));
+    await app.updateComplete;
+
+    const docs = store.getTable('docs');
+    const docIds = Object.keys(docs);
+    expect(docIds.length).to.be.greaterThan(0);
+    const savedDoc = docs[docIds[0]];
+    expect(savedDoc.name).to.include('Scan ');
+    const savedPages = JSON.parse(savedDoc.pages);
+    expect(savedPages).to.have.lengthOf(1);
+    expect(savedPages[0].id).to.equal('p_save_1');
   });
 
   it('navigates to /scan and opens add/edit dialog with batch scanner', async () => {

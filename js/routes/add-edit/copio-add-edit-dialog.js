@@ -5,6 +5,7 @@ import { notify } from '../../services/notify.js';
 
 export class CopioAddEditDialog extends LitElement {
   #scannerInitialized = false;
+  #scannerDraftPages = [];
 
   createRenderRoot() {
     return this;
@@ -26,33 +27,27 @@ export class CopioAddEditDialog extends LitElement {
 
     scanner.addEventListener('copio:scan-complete', (e) => {
       const detail = e.detail || {};
-      const scannedPages = detail.pages || (detail.page ? [detail.page] : []);
-      this.#syncScannerPages(scannedPages);
-      const inputName = this.querySelector('.dialog-add-edit-input-name');
-      if (inputName && !inputName.value.trim()) {
-        const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-        inputName.value = `Scan ${dateStr}`;
-        this.#clearValidation();
-      }
-      notify.success(`✓ Scanned ${scannedPages.length} page${scannedPages.length !== 1 ? 's' : ''}`);
+      const scannedPages = detail.pages || (detail.page ? [detail.page] : this.#scannerDraftPages);
+      this.#applyScannedPages(scannedPages);
     });
 
     scanner.addEventListener('copio:pages-changed', (e) => {
       const pages = e.detail?.pages;
-      if (Array.isArray(pages) && pages.length > 0) {
-        this.#syncScannerPages(pages);
+      if (Array.isArray(pages)) {
+        this.#scannerDraftPages = pages;
       }
     });
 
     this.#scannerInitialized = true;
   };
 
-  #syncScannerPages = (scannedPages) => {
-    if (!Array.isArray(scannedPages) || scannedPages.length === 0) return;
+  #applyScannedPages = (scannedPages) => {
     const copioImages = this.querySelector('copio-images');
-    if (!copioImages) return;
+    const scannerHost = this.querySelector('.modal-scanner-host');
+    const toggleBtn = this.querySelector('.btn-toggle-scanner');
+    const inputName = this.querySelector('.dialog-add-edit-input-name');
 
-    const existing = copioImages.images || [];
+    const existing = copioImages?.images || [];
     const existingIds = new Set(existing.map((p) => p.id));
     const newItems = [];
 
@@ -72,9 +67,44 @@ export class CopioAddEditDialog extends LitElement {
       }
     }
 
-    if (newItems.length > 0) {
+    if (copioImages) {
       copioImages.images = [...existing, ...newItems];
+      copioImages.style.display = 'block';
     }
+
+    // Hide scanner once scan is complete, and show copio-images
+    if (scannerHost) {
+      scannerHost.style.display = 'none';
+    }
+    if (toggleBtn) {
+      toggleBtn.style.display = 'inline-flex';
+    }
+
+    if (inputName && !inputName.value.trim()) {
+      const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      inputName.value = `Scan ${dateStr}`;
+      this.#clearValidation();
+    }
+
+    notify.success(`✓ Scan complete (${(copioImages?.images || []).length} page${(copioImages?.images || []).length !== 1 ? 's' : ''})`);
+  };
+
+  #showScanner = () => {
+    const scannerHost = this.querySelector('.modal-scanner-host');
+    const copioImages = this.querySelector('copio-images');
+    const toggleBtn = this.querySelector('.btn-toggle-scanner');
+    const scanner = this.querySelector('copio-scanner');
+
+    if (scannerHost) scannerHost.style.display = 'block';
+    if (copioImages) copioImages.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none';
+    if (scanner) {
+      scanner.stage = 'viewfinder';
+      if (typeof scanner.clear === 'function') {
+        scanner.clear().catch(() => {});
+      }
+    }
+    this.#scannerDraftPages = [];
   };
 
   #clearValidation = () => {
@@ -106,11 +136,20 @@ export class CopioAddEditDialog extends LitElement {
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const copioImages = this.querySelector('copio-images');
+    const scannerHost = this.querySelector('.modal-scanner-host');
+    const toggleBtn = this.querySelector('.btn-toggle-scanner');
     const scanner = this.querySelector('copio-scanner');
 
     if (inputId) inputId.value = '';
     if (inputName) inputName.value = '';
-    if (copioImages) copioImages.images = [];
+    if (copioImages) {
+      copioImages.images = [];
+      copioImages.style.display = 'none';
+    }
+    if (scannerHost) scannerHost.style.display = 'block';
+    if (toggleBtn) toggleBtn.style.display = 'none';
+
+    this.#scannerDraftPages = [];
     if (scanner && typeof scanner.clear === 'function') {
       scanner.clear().catch(() => {});
     }
@@ -142,7 +181,20 @@ export class CopioAddEditDialog extends LitElement {
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
 
+    // Show scanner beneath title, hide copio-images
+    const scannerHost = this.querySelector('.modal-scanner-host');
+    const copioImages = this.querySelector('copio-images');
+    const toggleBtn = this.querySelector('.btn-toggle-scanner');
     const scanner = this.querySelector('copio-scanner');
+
+    if (scannerHost) scannerHost.style.display = 'block';
+    if (copioImages) {
+      copioImages.images = [];
+      copioImages.style.display = 'none';
+    }
+    if (toggleBtn) toggleBtn.style.display = 'none';
+
+    this.#scannerDraftPages = [];
     if (scanner) {
       scanner.stage = 'viewfinder';
       if (typeof scanner.clear === 'function') {
@@ -164,26 +216,35 @@ export class CopioAddEditDialog extends LitElement {
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const copioImages = this.querySelector('copio-images');
+    const scannerHost = this.querySelector('.modal-scanner-host');
+    const toggleBtn = this.querySelector('.btn-toggle-scanner');
     const scanner = this.querySelector('copio-scanner');
 
     inputId.value = id;
     inputName.value = name;
 
+    // For editing an existing doc: show copio-images preview thumbnails, hide scanner by default
+    if (scannerHost) scannerHost.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'inline-flex';
     if (scanner && typeof scanner.clear === 'function') {
       scanner.clear().catch(() => {});
     }
+    this.#scannerDraftPages = [];
 
     await customElements.whenDefined('copio-images');
-    copioImages.images = pages.map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
-      id,
-      src,
-      originalSrc: originalSrc || src,
-      edits: edits || { crop: null, rotation: 0, filter: 'none' },
-      exif,
-      type,
-      name,
-      content,
-    }));
+    if (copioImages) {
+      copioImages.images = pages.map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
+        id,
+        src,
+        originalSrc: originalSrc || src,
+        edits: edits || { crop: null, rotation: 0, filter: 'none' },
+        exif,
+        type,
+        name,
+        content,
+      }));
+      copioImages.style.display = 'block';
+    }
 
     if (!dialog.open) {
       await dialog.show();
@@ -215,13 +276,28 @@ export class CopioAddEditDialog extends LitElement {
       return;
     }
 
-    const pages = (copioImages?.images || []).map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
+    let pages = copioImages?.images || [];
+    // Fallback: If user didn't click "Complete Scan" but scanner has pages, use them
+    if (pages.length === 0 && this.#scannerDraftPages.length > 0) {
+      pages = this.#scannerDraftPages.map((p, idx) => ({
+        id: p.id || randomId(),
+        src: p.src,
+        originalSrc: p.originalSrc || p.src,
+        edits: p.edits || { crop: null, rotation: 0, filter: 'none' },
+        exif: p.exif || null,
+        type: 'image',
+        name: p.label || `Page ${idx + 1}`,
+        content: null,
+      }));
+    }
+
+    const formattedPages = pages.map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
       id,
       src,
       originalSrc: originalSrc || src,
       edits: edits || { crop: null, rotation: 0, filter: 'none' },
       exif,
-      type,
+      type: type || 'image',
       name,
       content,
     }));
@@ -231,7 +307,7 @@ export class CopioAddEditDialog extends LitElement {
     this.dispatchEvent(new CustomEvent('dialog:save', {
       bubbles: true,
       composed: false,
-      detail: { id, name, pages }
+      detail: { id, name, pages: formattedPages }
     }));
 
     this.querySelector('.dialog-add-edit')?.hide();
@@ -267,6 +343,7 @@ export class CopioAddEditDialog extends LitElement {
             </div>
           </div>
 
+          <!-- Scanner beneath title -->
           <div class="copio-scanner-host modal-scanner-host">
             <copio-scanner
               class="dialog-copio-scanner"
@@ -276,9 +353,23 @@ export class CopioAddEditDialog extends LitElement {
             ></copio-scanner>
           </div>
 
-          <copio-images
-            style="display: block; margin-top: 1.5rem"
-          ></copio-images>
+          <!-- Preview thumbnails shown after Complete Scan or when editing existing doc -->
+          <div style="margin-top: 1rem;">
+            <sl-button
+              size="small"
+              variant="default"
+              class="btn-toggle-scanner"
+              style="display: none; margin-bottom: 0.75rem;"
+              @click=${this.#showScanner}
+            >
+              <sl-icon slot="prefix" name="camera"></sl-icon>
+              Scan More Pages
+            </sl-button>
+
+            <copio-images
+              style="display: none;"
+            ></copio-images>
+          </div>
 
           <br />
 
