@@ -126,6 +126,7 @@ export class CopioApp extends LitElement {
     switch (name) {
       case 'home':
         break;
+      case 'scan':
       case 'add':
         await this.#openAddDialog();
         break;
@@ -154,6 +155,11 @@ export class CopioApp extends LitElement {
     router.navigate('/add');
   }
 
+  handleScan() {
+    this.#requestPersistentStorage();
+    router.navigate('/add');
+  }
+
   async #requestPersistentStorage() {
     if (navigator.storage && navigator.storage.persist) {
       try {
@@ -165,10 +171,16 @@ export class CopioApp extends LitElement {
     }
   }
 
-  handleAddEditSave(e) {
+  async handleAddEditSave(e) {
     const { id, name, pages } = e.detail;
-    this.docRepo.saveDoc(id, { name, pages });
-    notify.success(`Saved "${name || 'document'}"`);
+    try {
+      await this.docRepo.saveDoc(id, { name, pages });
+      this.#refreshDocs();
+      notify.success(`Saved "${name || 'document'}"`);
+    } catch (err) {
+      console.error('Failed to save document:', err);
+      notify.error('Failed to save document');
+    }
     router.navigate('/');
   }
 
