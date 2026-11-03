@@ -10,12 +10,9 @@
   },
   "devDependencies": {
     "@copio/sdk": "^0.1.2",
-    "@custom-elements-manifest/analyzer": "^0.11.0",
     "@esm-bundle/chai": "^4.3.4-fix.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
-    "esbuild": "^0.28.2",
-    "oxlint": "^1.88.0",
-    "typescript": "^7.0.2"
+    "oxlint": "^1.88.0"
   }
 }

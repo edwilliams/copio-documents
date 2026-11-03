@@ -1,4 +1,4 @@
-# Copio — Architecture Guide
+# Copio Documents — Architecture Guide
 
 > For developers and AI assistants getting up to speed. Complements `README.md` (user-facing) with the *how* and *why* of the codebase.
 
@@ -6,7 +6,7 @@
 
 ## Mental Model
 
-Copio is a **single-page app with no build step**. Every file you see is what the browser runs. There is no TypeScript compilation, no bundler, no JSX transform. The `js/lib/` folder contains pre-built third-party bundles; everything else is vanilla ES modules authored directly.
+Copio Documents is an offline-first **single-page web application with no runtime build step**. Every file you see is what the browser runs. There is no runtime TypeScript compilation, no bundler, no JSX transform. The `js/lib/` folder contains pre-built third-party bundles; everything else is vanilla ES modules authored directly.
 
 The app is offline-first: the Service Worker caches every asset at install time. Any new file added to the project **must** be added to `files-to-cache.json` and the `CACHE_NAME` version bumped in `sw.js`.
 
@@ -172,18 +172,14 @@ index.html
 
 ---
 
-## Architecture Decision Records (ADRs)
+## Hexagonal Architecture & Driven Ports
 
-Key architectural decisions for the SDK, packaging, and module loading are recorded in:
-- [ADR 0001: SDK Architecture, Hexagonal Core, and Packaging Boundaries](docs/adr/0001-sdk-architecture.md) (CPO-030)
+Copio Documents separates business logic from platform infrastructure:
+1. **Core Domain Services**: Headless services like `DocRepository` and `SyncService` encapsulate document state, mutations, reordering, and session management.
+2. **Driven (Outbound) Ports**: Defined port contracts for storage (`StoragePort`), OCR (`OcrPort`), image processing (`ImageProcessorPort`), and sync (`SyncPort`).
+3. **Pluggable Adapters**: Concrete implementations such as `IndexedDbStorageAdapter` (TinyBase in browser), `MemoryStorageAdapter` (in-memory for headless tests), and `PeerJsSyncAdapter`.
 
-### Hexagonal Architecture & `CopioEngine` Roadmap
-As decided in ADR 0001, the SDK target architecture separates concerns into:
-1. **Hexagon Core (`CopioEngine` / `@copio/core`)**: Headless, DOM-free business logic for page management, scan sessions, edit stacks, and export pipelines. Scheduled for implementation in **CPO-045** (depending on CPO-014 document repository and CPO-033 storage adapter).
-2. **Driving (Inbound) Adapters**: `<copio-scanner>` Web Component (CPO-034) and headless API.
-3. **Driven (Outbound) Ports**: `StoragePort` (CPO-033), `ImageProcessorPort`, `OcrPort`, `PdfPort`, `SyncPort`.
-
-#### `StoragePort` Contract (CPO-033)
+### `StoragePort` Contract
 The storage port interface (`js/adapters/storage/storage-port.js`) defines the driven contract for data storage:
 
 ```ts
@@ -200,11 +196,11 @@ interface StoragePort {
 }
 ```
 
-##### Custom Storage Adapter Stub Example
-An SDK consumer or host application can implement a custom cloud backend adapter (e.g. S3, Supabase, or REST API) and inject it into `DocRepository`:
+#### Custom Storage Adapter Example
+A custom backend adapter (e.g. S3, Supabase, or REST API) can implement `StoragePort` and be injected into `DocRepository`:
 
 ```js
-import { StoragePort } from '@copio/sdk';
+import { StoragePort } from './storage-port.js';
 
 export class CustomCloudStorageAdapter extends StoragePort {
   async init() {
@@ -266,7 +262,7 @@ export class CustomCloudStorageAdapter extends StoragePort {
 | **Sortable.js** | Drag-to-reorder pages | ES module |
 | **qrcode** | QR code generation for sync URL | Lazy dynamic loader (`loadQrCode()`) |
 
-Per **CPO-031** and **ADR 0001**, `index.html` contains zero third-party classic `<script>` tags. Heavy dependencies (Tesseract, PDFKit, JSZip, PeerJS, Cropper, marked, qrcode) are loaded on demand via `js/utils/module-loader.js`. All worker, WASM, and asset paths resolve via a configurable `assetBase` (`setAssetBase()`, `resolveAssetUrl()`).
+`index.html` contains zero third-party classic `<script>` tags. Heavy dependencies (Tesseract, PDFKit, JSZip, PeerJS, Cropper, marked, qrcode) are loaded on demand via `js/utils/module-loader.js`. All worker, WASM, and asset paths resolve via a configurable `assetBase` (`setAssetBase()`, `resolveAssetUrl()`).
 
 ---
 
@@ -300,5 +296,5 @@ Per **CPO-031** and **ADR 0001**, `index.html` contains zero third-party classic
 ## Deployment & Feature Branches
 
 - **Main Branch**: `master` is deployed directly to production on Netlify.
-- **Feature Branches & Deploy Previews**: Work on tickets should be pushed to dedicated feature branches (`feature/CPO-xxx`) with a GitHub Pull Request. Netlify automatically creates an ephemeral **Deploy Preview** URL (e.g. `https://deploy-preview-12--copio.netlify.app`) for each PR, posting the link as a GitHub PR comment for live testing before merging into `master`.
+- **Feature Branches & Deploy Previews**: Work on tickets should be pushed to dedicated feature branches (`feature/<name>`) with a GitHub Pull Request. Netlify automatically creates an ephemeral **Deploy Preview** URL (e.g. `https://deploy-preview-<PR_NUMBER>--copio-documents.netlify.app`) for each PR.
 

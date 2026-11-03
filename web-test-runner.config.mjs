@@ -1,7 +1,7 @@
 import { playwrightLauncher } from '@web/test-runner-playwright';
 
 export default {
-  files: ['test/**/*.test.js', '!test/engine-node.test.js'],
+  files: ['test/**/*.test.js'],
   nodeResolve: true,
   concurrency: 1,
   testFramework: {
