@@ -9,4 +9,4 @@ Whenever you complete a ticket or ticket group:
 5. Verify both GitHub Actions checks and the Netlify Deploy Preview succeed before declaring complete:
    - Verify CI checks pass using `gh pr checks`.
    - Provide the user with the PR URL and the accompanying Netlify Deploy Preview URL:
-     `https://deploy-preview-<PR_NUMBER>--copio.netlify.app`
+     `https://deploy-preview-<PR_NUMBER>--copio-documents.netlify.app`
