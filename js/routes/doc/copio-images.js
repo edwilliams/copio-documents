@@ -1080,4 +1080,6 @@ export class CopioImages extends HTMLElement {
   }
 }
 
-customElements.define('copio-images', CopioImages);
+if (!customElements.get('copio-images')) {
+  customElements.define('copio-images', CopioImages);
+}

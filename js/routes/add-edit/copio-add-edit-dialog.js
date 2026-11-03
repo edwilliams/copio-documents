@@ -202,4 +202,6 @@ export class CopioAddEditDialog extends LitElement {
   }
 }
 
-customElements.define('copio-add-edit-dialog', CopioAddEditDialog);
+if (!customElements.get('copio-add-edit-dialog')) {
+  customElements.define('copio-add-edit-dialog', CopioAddEditDialog);
+}

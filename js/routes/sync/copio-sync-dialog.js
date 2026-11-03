@@ -82,4 +82,6 @@ export class CopioSyncDialog extends LitElement {
   }
 }
 
-customElements.define('copio-sync-dialog', CopioSyncDialog);
+if (!customElements.get('copio-sync-dialog')) {
+  customElements.define('copio-sync-dialog', CopioSyncDialog);
+}

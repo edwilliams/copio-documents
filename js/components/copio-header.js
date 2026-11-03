@@ -106,4 +106,6 @@ export class CopioHeader extends LitElement {
   }
 }
 
-customElements.define('copio-header', CopioHeader);
+if (!customElements.get('copio-header')) {
+  customElements.define('copio-header', CopioHeader);
+}

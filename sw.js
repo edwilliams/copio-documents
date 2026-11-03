@@ -1,4 +1,4 @@
-const CACHE_NAME = 'copio-cache-v22'; // bump this on every deploy
+const CACHE_NAME = 'copio-cache-v23'; // bump this on every deploy
 
 // --------------------------------------------------------
 // install: fetch files-to-cache.json & cache all listed files

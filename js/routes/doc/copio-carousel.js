@@ -352,4 +352,6 @@ export class CopioCarousel extends LitElement {
   }
 }
 
-customElements.define('copio-carousel', CopioCarousel);
+if (!customElements.get('copio-carousel')) {
+  customElements.define('copio-carousel', CopioCarousel);
+}

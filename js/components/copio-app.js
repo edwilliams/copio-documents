@@ -557,4 +557,6 @@ export class CopioApp extends LitElement {
   }
 }
 
-customElements.define('copio-app', CopioApp);
+if (!customElements.get('copio-app')) {
+  customElements.define('copio-app', CopioApp);
+}
