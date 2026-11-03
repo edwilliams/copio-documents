@@ -103,7 +103,7 @@ copio-documents/
 │   ├── adapters/               # Driven ports: Storage (IndexedDB, Memory), OCR, PDF, Sync
 │   ├── services/               # Headless domain services (DocRepository, SyncService, OcrService)
 │   └── core/                   # Store, hash router, component registry
-└── sdk/                        # Copio SDK core interfaces, events, and headless engine
+└── vendor/                     # Vendored @copio/sdk runtime bundle (vendor/copio.0.1.2.js)
 ```
 
 ### Key Architectural Principles
@@ -146,20 +146,17 @@ copio-documents/
 ### 💻 Developer Setup
 
 #### Prerequisites
-- **Node.js** (v18+ recommended — needed for build scripts, tests, and bundling).
+- **Node.js** (v18+ recommended — needed for running the test suite and linter).
 - A static HTTP/HTTPS server or `localhost` (HTTPS is required for Service Worker activation on non-localhost hosts).
 
-#### Installation & Build
+#### Installation
 ```bash
 # Clone the repository
 git clone https://github.com/edwilliams/copio-documents.git
 cd copio-documents
 
-# Install dependencies
+# Install dependencies (test runner and linter)
 npm install
-
-# Build SDK distributables and types
-npm run build:sdk
 ```
 
 #### Run Locally
