@@ -309,4 +309,6 @@ export class CopioRow extends LitElement {
   }
 }
 
-customElements.define('copio-row', CopioRow);
+if (!customElements.get('copio-row')) {
+  customElements.define('copio-row', CopioRow);
+}

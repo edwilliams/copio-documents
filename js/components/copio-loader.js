@@ -144,4 +144,6 @@ export class CopioLoader extends LitElement {
   }
 }
 
-customElements.define('copio-loader', CopioLoader);
+if (!customElements.get('copio-loader')) {
+  customElements.define('copio-loader', CopioLoader);
+}

@@ -378,4 +378,6 @@ export class CopioDocOcrDialog extends LitElement {
   }
 }
 
-customElements.define('copio-doc-ocr-dialog', CopioDocOcrDialog);
+if (!customElements.get('copio-doc-ocr-dialog')) {
+  customElements.define('copio-doc-ocr-dialog', CopioDocOcrDialog);
+}
