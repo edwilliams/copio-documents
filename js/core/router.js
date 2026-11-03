@@ -5,6 +5,7 @@
 export const ROUTES = [
   { path: '/', name: 'home' },
   { path: '/add', name: 'add' },
+  { path: '/scan', name: 'scan' },
   { path: '/doc/:id', name: 'doc-view' },
   { path: '/doc/:id/edit', name: 'doc-edit' },
   { path: '/sync', name: 'sync-host' },

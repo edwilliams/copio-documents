@@ -7,6 +7,7 @@ import '../routes/doc/copio-carousel.js';
 import '../routes/ocr/copio-doc-ocr-dialog.js';
 import '../routes/sync/copio-sync-dialog.js';
 import '../routes/add-edit/copio-add-edit-dialog.js';
+import '../../vendor/copio.0.1.2.js';
 
 // =============================================
 // Show UI when custom components are ready
@@ -41,6 +42,7 @@ await Promise.allSettled([
   customElements.whenDefined('sl-tab'),
   customElements.whenDefined('sl-tab-panel'),
   // copio
+  customElements.whenDefined('copio-scanner'),
   customElements.whenDefined('copio-app'),
   customElements.whenDefined('copio-loader'),
   customElements.whenDefined('copio-header'),

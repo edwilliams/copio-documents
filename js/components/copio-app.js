@@ -126,6 +126,7 @@ export class CopioApp extends LitElement {
     switch (name) {
       case 'home':
         break;
+      case 'scan':
       case 'add':
         await this.#openAddDialog();
         break;
@@ -152,6 +153,11 @@ export class CopioApp extends LitElement {
   handleAddNew() {
     this.#requestPersistentStorage();
     router.navigate('/add');
+  }
+
+  handleScan() {
+    this.#requestPersistentStorage();
+    router.navigate('/scan');
   }
 
   async #requestPersistentStorage() {
@@ -471,12 +477,18 @@ export class CopioApp extends LitElement {
             <sl-icon class="empty-state-icon" name="plus-circle"></sl-icon>
             <h2 class="empty-state-title">No documents yet</h2>
             <p class="empty-state-text">
-              Tap here or the button below to add your first image or document.
+              Tap here or the buttons below to scan or add your first document.
             </p>
-            <sl-button variant="primary" size="medium" @click=${(e) => { e.stopPropagation(); this.handleAddNew(); }}>
-              <sl-icon slot="prefix" name="plus-circle"></sl-icon>
-              Add Document
-            </sl-button>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+              <sl-button variant="primary" size="medium" @click=${(e) => { e.stopPropagation(); this.handleScan(); }}>
+                <sl-icon slot="prefix" name="camera"></sl-icon>
+                Scan Document
+              </sl-button>
+              <sl-button variant="default" size="medium" @click=${(e) => { e.stopPropagation(); this.handleAddNew(); }}>
+                <sl-icon slot="prefix" name="plus-circle"></sl-icon>
+                Add Document
+              </sl-button>
+            </div>
           </div>
         </div>
       `;
@@ -527,6 +539,13 @@ export class CopioApp extends LitElement {
         ></copio-add-edit-dialog>
 
         <div class="copio-fab-wrap">
+          <sl-icon-button
+            class="dialog-scan-btn"
+            name="camera"
+            label="Scan Document"
+            style="font-size: 2.5rem; margin-right: 0.5rem;"
+            @click=${this.handleScan}
+          ></sl-icon-button>
           <sl-icon-button
             class="dialog-add-edit-btn"
             name="plus-circle"

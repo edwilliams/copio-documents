@@ -1,16 +1,81 @@
 // @ts-nocheck
 import { LitElement, html } from '../../lib/lit-core.min.js';
 import { randomId } from '../../utils/utils.js';
+import { notify } from '../../services/notify.js';
 
 export class CopioAddEditDialog extends LitElement {
+  #scannerInitialized = false;
+
   createRenderRoot() {
     return this;
+  }
+
+  firstUpdated() {
+    this.#initScanner();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     this.#clearValidation();
   }
+
+  #initScanner = () => {
+    if (this.#scannerInitialized) return;
+    const scanner = this.querySelector('copio-scanner');
+    if (!scanner) return;
+
+    scanner.addEventListener('copio:scan-complete', (e) => {
+      const detail = e.detail || {};
+      const scannedPages = detail.pages || (detail.page ? [detail.page] : []);
+      this.#syncScannerPages(scannedPages);
+      const inputName = this.querySelector('.dialog-add-edit-input-name');
+      if (inputName && !inputName.value.trim()) {
+        const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        inputName.value = `Scan ${dateStr}`;
+        this.#clearValidation();
+      }
+      notify.success(`✓ Scanned ${scannedPages.length} page${scannedPages.length !== 1 ? 's' : ''}`);
+    });
+
+    scanner.addEventListener('copio:pages-changed', (e) => {
+      const pages = e.detail?.pages;
+      if (Array.isArray(pages) && pages.length > 0) {
+        this.#syncScannerPages(pages);
+      }
+    });
+
+    this.#scannerInitialized = true;
+  };
+
+  #syncScannerPages = (scannedPages) => {
+    if (!Array.isArray(scannedPages) || scannedPages.length === 0) return;
+    const copioImages = this.querySelector('copio-images');
+    if (!copioImages) return;
+
+    const existing = copioImages.images || [];
+    const existingIds = new Set(existing.map((p) => p.id));
+    const newItems = [];
+
+    for (let idx = 0; idx < scannedPages.length; idx++) {
+      const p = scannedPages[idx];
+      if (!existingIds.has(p.id)) {
+        newItems.push({
+          id: p.id || randomId(),
+          src: p.src,
+          originalSrc: p.originalSrc || p.src,
+          edits: p.edits || { crop: null, rotation: 0, filter: 'none' },
+          exif: p.exif || null,
+          type: 'image',
+          name: p.label || p.name || `Page ${existing.length + newItems.length + 1}`,
+          content: null,
+        });
+      }
+    }
+
+    if (newItems.length > 0) {
+      copioImages.images = [...existing, ...newItems];
+    }
+  };
 
   #clearValidation = () => {
     const inputName = this.querySelector('.dialog-add-edit-input-name');
@@ -41,10 +106,14 @@ export class CopioAddEditDialog extends LitElement {
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const copioImages = this.querySelector('copio-images');
+    const scanner = this.querySelector('copio-scanner');
 
     if (inputId) inputId.value = '';
     if (inputName) inputName.value = '';
     if (copioImages) copioImages.images = [];
+    if (scanner && typeof scanner.clear === 'function') {
+      scanner.clear().catch(() => {});
+    }
     
     this.dispatchEvent(new CustomEvent('dialog:close', { bubbles: true, composed: false }));
   };
@@ -68,15 +137,26 @@ export class CopioAddEditDialog extends LitElement {
 
   async open() {
     await this.updateComplete;
+    this.#initScanner();
     this.#clearValidation();
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
+
+    const scanner = this.querySelector('copio-scanner');
+    if (scanner) {
+      scanner.stage = 'viewfinder';
+      if (typeof scanner.clear === 'function') {
+        scanner.clear().catch(() => {});
+      }
+    }
+
     await dialog.show();
     this.querySelector('.dialog-add-edit-input-name')?.focus();
   }
 
   async openEdit(id, name, pages) {
     await this.updateComplete;
+    this.#initScanner();
     this.#clearValidation();
     const dialog = this.querySelector('.dialog-add-edit');
     if (!dialog) return;
@@ -84,9 +164,14 @@ export class CopioAddEditDialog extends LitElement {
     const inputId = this.querySelector('.dialog-add-edit-input-id');
     const inputName = this.querySelector('.dialog-add-edit-input-name');
     const copioImages = this.querySelector('copio-images');
+    const scanner = this.querySelector('copio-scanner');
 
     inputId.value = id;
     inputName.value = name;
+
+    if (scanner && typeof scanner.clear === 'function') {
+      scanner.clear().catch(() => {});
+    }
 
     await customElements.whenDefined('copio-images');
     copioImages.images = pages.map(({ id, src, originalSrc, edits, exif, type, name, content }) => ({
@@ -155,9 +240,9 @@ export class CopioAddEditDialog extends LitElement {
   render() {
     return html`
       <sl-dialog
-        label="Add / Edit"
+        label="Add / Edit Document"
         class="dialog-add-edit"
-        style="--width: min(94%, 640px)"
+        style="--width: min(96%, 720px)"
         @sl-after-hide=${this.#handleHide}
         @keydown=${this.#handleKeydown}
       >
@@ -168,7 +253,7 @@ export class CopioAddEditDialog extends LitElement {
             placeholder="id"
             style="display: none"
           ></sl-input>
-          <div class="dialog-name-field" style="max-width: 300px">
+          <div class="dialog-name-field" style="max-width: 320px">
             <sl-input
               class="dialog-add-edit-input-name"
               placeholder="Enter name of document or image"
@@ -180,6 +265,15 @@ export class CopioAddEditDialog extends LitElement {
             >
               Please enter a document name
             </div>
+          </div>
+
+          <div class="copio-scanner-host modal-scanner-host">
+            <copio-scanner
+              class="dialog-copio-scanner"
+              mode="batch"
+              aspect="a4"
+              features="crop rotate filter ocr export"
+            ></copio-scanner>
           </div>
 
           <copio-images
