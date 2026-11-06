@@ -30,7 +30,7 @@ export class CopioSyncDialog extends LitElement {
 
   render() {
     if (!this.syncState) return '';
-    const { step, qrSvg, url, added, message } = this.syncState;
+    const { step, qrSvg, url, added = 0, removed = 0, message } = this.syncState;
     let body;
     if (step === 'init') {
       body = html`<sl-spinner></sl-spinner> Setting up…`;
@@ -59,8 +59,12 @@ export class CopioSyncDialog extends LitElement {
     } else if (step === 'syncing') {
       body = html`<sl-spinner></sl-spinner> Syncing…`;
     } else if (step === 'done') {
+      const parts = [];
+      if (added > 0) parts.push(`${added} doc${added !== 1 ? 's' : ''} added`);
+      if (removed > 0) parts.push(`${removed} doc${removed !== 1 ? 's' : ''} removed`);
+      const summary = parts.length > 0 ? parts.join(', ') : 'up to date';
       body = html`<p>
-        Sync complete — ${added} doc${added !== 1 ? 's' : ''} added.
+        Sync complete — ${summary}.
       </p>`;
     } else if (step === 'error') {
       body = html`<p style="color:var(--sl-color-danger-600)">

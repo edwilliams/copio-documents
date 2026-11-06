@@ -1,5 +1,5 @@
 import { expect } from '@esm-bundle/chai';
-import { createStore } from '../js/lib/tinybase.6.5.2.js';
+import { createStore, createMergeableStore } from '../js/lib/tinybase.6.5.2.js';
 import { SyncManager } from '../js/services/sync-service.js';
 import '../js/routes/sync/copio-sync-dialog.js';
 import '../js/components/copio-app.js';
@@ -81,6 +81,94 @@ describe('SyncManager P2P', function () {
     hostManager.close();
     joinerManager.close();
   });
+
+  it('should propagate document deletions using createMergeableStore', async () => {
+    const storeHost = createMergeableStore('host');
+    const storeJoiner = createMergeableStore('joiner');
+
+    // Both stores start with shared doc1
+    storeHost.setTable('docs', {
+      doc1: { name: 'Shared Doc', pages: '[]' },
+      doc2: { name: 'Keep Doc', pages: '[]' },
+    });
+    storeJoiner.merge(storeHost);
+    expect(storeJoiner.hasRow('docs', 'doc1')).to.be.true;
+
+    // Joiner deletes doc1 locally
+    storeJoiner.delRow('docs', 'doc1');
+    expect(storeJoiner.hasRow('docs', 'doc1')).to.be.false;
+
+    // Host adds a new document concurrently
+    storeHost.setRow('docs', 'doc3', { name: 'New Host Doc', pages: '[]' });
+
+    let hostState = null;
+    let joinerState = null;
+
+    const hostManager = new SyncManager(storeHost, (state) => {
+      hostState = state;
+    });
+
+    const joinerManager = new SyncManager(storeJoiner, (state) => {
+      joinerState = state;
+    });
+
+    hostManager.startHost();
+
+    // Wait for host to get ID
+    await new Promise((resolve, reject) => {
+      const interval = setInterval(() => {
+        if (hostState?.step === 'waiting') {
+          clearInterval(interval);
+          resolve();
+        } else if (hostState?.step === 'error') {
+          clearInterval(interval);
+          reject(new Error(hostState.message));
+        }
+      }, 100);
+    });
+
+    const hostPeerId = hostState.peerId;
+    joinerManager.startJoiner(hostPeerId);
+
+    // Wait for sync completion
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Timeout waiting for sync. Host: ${hostState?.step}, Joiner: ${joinerState?.step}`));
+      }, 15000);
+
+      const interval = setInterval(() => {
+        if (hostState?.step === 'error' || joinerState?.step === 'error') {
+          clearInterval(interval);
+          clearTimeout(timeout);
+          reject(new Error(`Host error: ${hostState?.message}, Joiner error: ${joinerState?.message}`));
+        } else if (hostState?.step === 'done' && joinerState?.step === 'done') {
+          clearInterval(interval);
+          clearTimeout(timeout);
+          resolve();
+        }
+      }, 100);
+    });
+
+    // Verification:
+    // doc1 was deleted by Joiner, so it MUST be deleted on Host too (no resurrection!)
+    expect(storeHost.hasRow('docs', 'doc1')).to.be.false;
+    expect(storeJoiner.hasRow('docs', 'doc1')).to.be.false;
+
+    // doc2 was kept by both
+    expect(storeHost.hasRow('docs', 'doc2')).to.be.true;
+    expect(storeJoiner.hasRow('docs', 'doc2')).to.be.true;
+
+    // doc3 was added by Host, so Joiner receives it
+    expect(storeHost.hasRow('docs', 'doc3')).to.be.true;
+    expect(storeJoiner.hasRow('docs', 'doc3')).to.be.true;
+
+    // Verify added and removed counts in syncState
+    expect(hostState.removed).to.equal(1);
+    expect(joinerState.added).to.equal(1);
+
+    hostManager.close();
+    joinerManager.close();
+  });
 });
 
 describe('CopioSyncDialog UI & App Integration', () => {
@@ -154,5 +242,47 @@ describe('CopioSyncDialog UI & App Integration', () => {
     expect(app.syncState).to.be.null;
 
     app.remove();
+  });
+
+  it('renders sync complete message indicating docs added and removed', async () => {
+    const dialog = document.createElement('copio-sync-dialog');
+    dialog.syncState = {
+      step: 'done',
+      added: 2,
+      removed: 1,
+    };
+    document.body.appendChild(dialog);
+    await dialog.updateComplete;
+
+    expect(dialog.textContent).to.include('Sync complete — 2 docs added, 1 doc removed.');
+
+    dialog.syncState = {
+      step: 'done',
+      added: 0,
+      removed: 3,
+    };
+    dialog.requestUpdate();
+    await dialog.updateComplete;
+    expect(dialog.textContent).to.include('Sync complete — 3 docs removed.');
+
+    dialog.syncState = {
+      step: 'done',
+      added: 1,
+      removed: 0,
+    };
+    dialog.requestUpdate();
+    await dialog.updateComplete;
+    expect(dialog.textContent).to.include('Sync complete — 1 doc added.');
+
+    dialog.syncState = {
+      step: 'done',
+      added: 0,
+      removed: 0,
+    };
+    dialog.requestUpdate();
+    await dialog.updateComplete;
+    expect(dialog.textContent).to.include('Sync complete — up to date.');
+
+    dialog.remove();
   });
 });

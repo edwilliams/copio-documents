@@ -1,5 +1,6 @@
 import { createDefaultAdapter } from '../adapters/storage/index.js';
 import { randomId } from '../utils/utils.js';
+import { createMergeableStore } from '../lib/tinybase.6.5.2.js';
 
 /**
  * @typedef {Object} DocMetadata
@@ -436,6 +437,56 @@ export class DocRepository {
       result[doc.id] = doc;
     }
     return result;
+  }
+
+  /**
+   * Retrieves synchronization payload for wire transmission.
+   * If underlying store is a MergeableStore, returns CRDT payload with tombstones.
+   * Otherwise falls back to legacy table export.
+   * @returns {Promise<{ type: string, content?: any, docs?: any }>}
+   */
+  async getSyncPayload() {
+    const store = this.store;
+    if (store && typeof store.isMergeable === 'function' && store.isMergeable()) {
+      return {
+        type: 'mergeable',
+        content: store.getMergeableContent(),
+      };
+    }
+    return {
+      type: 'legacy',
+      docs: await this.exportAll(),
+    };
+  }
+
+  /**
+   * Merges synchronization payload received over wire.
+   * Supports both CRDT mergeable payloads and legacy document dictionaries.
+   * @param {any} payload
+   * @returns {Promise<{ added: number, removed: number }>} Counts of added and removed documents
+   */
+  async importSyncPayload(payload) {
+    const store = this.store;
+    if (
+      payload?.type === 'mergeable' &&
+      payload?.content &&
+      store &&
+      typeof store.isMergeable === 'function' &&
+      store.isMergeable()
+    ) {
+      const prevDocIds = new Set((await this.listDocs()).map((d) => d.id));
+      const incoming = createMergeableStore().setMergeableContent(payload.content);
+      store.merge(incoming);
+      const afterDocs = await this.listDocs();
+      const afterDocIds = new Set(afterDocs.map((d) => d.id));
+      const added = afterDocs.filter((d) => !prevDocIds.has(d.id)).length;
+      const removed = Array.from(prevDocIds).filter((id) => !afterDocIds.has(id)).length;
+      return { added, removed };
+    }
+
+    const docs = payload?.type === 'legacy' ? payload.docs : payload;
+    const added = await this.importDocs(docs);
+    return { added, removed: 0 };
   }
 
   /**

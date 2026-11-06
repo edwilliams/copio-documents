@@ -1,6 +1,7 @@
 import { notify } from './notify.js';
 import { getIceServers } from './ice-servers.js';
 import { loadPeerJs, loadQrCode } from '../utils/module-loader.js';
+import { createMergeableStore } from '../lib/tinybase.6.5.2.js';
 
 const CONNECT_TIMEOUT_MS = 30000;
 
@@ -157,17 +158,40 @@ export class SyncManager {
 
   #doSync(conn) {
     conn.on('data', async (raw) => {
-      let rows;
+      let data;
       try {
-        rows = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        data = typeof raw === 'string' ? JSON.parse(raw) : raw;
       } catch (err) {
         console.error('Failed to parse sync data:', err);
         return;
       }
       let added = 0;
-      if (typeof this.#target?.importDocs === 'function') {
+      let removed = 0;
+      if (typeof this.#target?.importSyncPayload === 'function') {
+        const result = await this.#target.importSyncPayload(data);
+        if (typeof result === 'object' && result !== null) {
+          added = result.added ?? 0;
+          removed = result.removed ?? 0;
+        } else {
+          added = Number(result) || 0;
+        }
+      } else if (
+        typeof this.#target?.isMergeable === 'function' &&
+        this.#target.isMergeable() &&
+        data?.type === 'mergeable' &&
+        data?.content
+      ) {
+        const prevDocIds = new Set(this.#target.hasTable('docs') ? this.#target.getRowIds('docs') : []);
+        const incoming = createMergeableStore().setMergeableContent(data.content);
+        this.#target.merge(incoming);
+        const afterDocIds = new Set(this.#target.hasTable('docs') ? this.#target.getRowIds('docs') : []);
+        added = Array.from(afterDocIds).filter((id) => !prevDocIds.has(id)).length;
+        removed = Array.from(prevDocIds).filter((id) => !afterDocIds.has(id)).length;
+      } else if (typeof this.#target?.importDocs === 'function') {
+        const rows = data?.type === 'legacy' ? data.docs : data;
         added = await this.#target.importDocs(rows);
       } else if (typeof this.#target?.transaction === 'function') {
+        const rows = data?.type === 'legacy' ? data.docs : data;
         this.#target.transaction(() => {
           for (const [id, row] of Object.entries(rows || {})) {
             if (!this.#target.hasRow('docs', id)) added++;
@@ -175,17 +199,35 @@ export class SyncManager {
           }
         });
       }
-      this.#setState({ ...this.#syncState, step: 'done', added });
-      notify.success(`Sync complete — ${added} doc${added !== 1 ? 's' : ''} added`);
+      this.#setState({ ...this.#syncState, step: 'done', added, removed });
+
+      const parts = [];
+      if (added > 0) parts.push(`${added} doc${added !== 1 ? 's' : ''} added`);
+      if (removed > 0) parts.push(`${removed} doc${removed !== 1 ? 's' : ''} removed`);
+      const summary = parts.length > 0 ? parts.join(', ') : 'up to date';
+      notify.success(`Sync complete — ${summary}`);
     });
 
     (async () => {
       try {
         let payload;
-        if (typeof this.#target?.exportAll === 'function') {
-          payload = await this.#target.exportAll();
+        if (typeof this.#target?.getSyncPayload === 'function') {
+          payload = await this.#target.getSyncPayload();
+        } else if (typeof this.#target?.isMergeable === 'function' && this.#target.isMergeable()) {
+          payload = {
+            type: 'mergeable',
+            content: this.#target.getMergeableContent(),
+          };
+        } else if (typeof this.#target?.exportAll === 'function') {
+          payload = {
+            type: 'legacy',
+            docs: await this.#target.exportAll(),
+          };
         } else if (typeof this.#target?.getTable === 'function') {
-          payload = this.#target.getTable('docs');
+          payload = {
+            type: 'legacy',
+            docs: this.#target.getTable('docs'),
+          };
         } else {
           payload = {};
         }
