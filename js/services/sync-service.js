@@ -166,8 +166,15 @@ export class SyncManager {
         return;
       }
       let added = 0;
+      let removed = 0;
       if (typeof this.#target?.importSyncPayload === 'function') {
-        added = await this.#target.importSyncPayload(data);
+        const result = await this.#target.importSyncPayload(data);
+        if (typeof result === 'object' && result !== null) {
+          added = result.added ?? 0;
+          removed = result.removed ?? 0;
+        } else {
+          added = Number(result) || 0;
+        }
       } else if (
         typeof this.#target?.isMergeable === 'function' &&
         this.#target.isMergeable() &&
@@ -177,8 +184,9 @@ export class SyncManager {
         const prevDocIds = new Set(this.#target.hasTable('docs') ? this.#target.getRowIds('docs') : []);
         const incoming = createMergeableStore().setMergeableContent(data.content);
         this.#target.merge(incoming);
-        const afterDocIds = this.#target.hasTable('docs') ? this.#target.getRowIds('docs') : [];
-        added = afterDocIds.filter((id) => !prevDocIds.has(id)).length;
+        const afterDocIds = new Set(this.#target.hasTable('docs') ? this.#target.getRowIds('docs') : []);
+        added = Array.from(afterDocIds).filter((id) => !prevDocIds.has(id)).length;
+        removed = Array.from(prevDocIds).filter((id) => !afterDocIds.has(id)).length;
       } else if (typeof this.#target?.importDocs === 'function') {
         const rows = data?.type === 'legacy' ? data.docs : data;
         added = await this.#target.importDocs(rows);
@@ -191,8 +199,13 @@ export class SyncManager {
           }
         });
       }
-      this.#setState({ ...this.#syncState, step: 'done', added });
-      notify.success(`Sync complete — ${added} doc${added !== 1 ? 's' : ''} added`);
+      this.#setState({ ...this.#syncState, step: 'done', added, removed });
+
+      const parts = [];
+      if (added > 0) parts.push(`${added} doc${added !== 1 ? 's' : ''} added`);
+      if (removed > 0) parts.push(`${removed} doc${removed !== 1 ? 's' : ''} removed`);
+      const summary = parts.length > 0 ? parts.join(', ') : 'up to date';
+      notify.success(`Sync complete — ${summary}`);
     });
 
     (async () => {

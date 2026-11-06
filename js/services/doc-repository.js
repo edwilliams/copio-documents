@@ -463,7 +463,7 @@ export class DocRepository {
    * Merges synchronization payload received over wire.
    * Supports both CRDT mergeable payloads and legacy document dictionaries.
    * @param {any} payload
-   * @returns {Promise<number>} Count of newly added documents
+   * @returns {Promise<{ added: number, removed: number }>} Counts of added and removed documents
    */
   async importSyncPayload(payload) {
     const store = this.store;
@@ -478,12 +478,15 @@ export class DocRepository {
       const incoming = createMergeableStore().setMergeableContent(payload.content);
       store.merge(incoming);
       const afterDocs = await this.listDocs();
+      const afterDocIds = new Set(afterDocs.map((d) => d.id));
       const added = afterDocs.filter((d) => !prevDocIds.has(d.id)).length;
-      return added;
+      const removed = Array.from(prevDocIds).filter((id) => !afterDocIds.has(id)).length;
+      return { added, removed };
     }
 
     const docs = payload?.type === 'legacy' ? payload.docs : payload;
-    return this.importDocs(docs);
+    const added = await this.importDocs(docs);
+    return { added, removed: 0 };
   }
 
   /**

@@ -162,6 +162,10 @@ describe('SyncManager P2P', function () {
     expect(storeHost.hasRow('docs', 'doc3')).to.be.true;
     expect(storeJoiner.hasRow('docs', 'doc3')).to.be.true;
 
+    // Verify added and removed counts in syncState
+    expect(hostState.removed).to.equal(1);
+    expect(joinerState.added).to.equal(1);
+
     hostManager.close();
     joinerManager.close();
   });
@@ -238,5 +242,47 @@ describe('CopioSyncDialog UI & App Integration', () => {
     expect(app.syncState).to.be.null;
 
     app.remove();
+  });
+
+  it('renders sync complete message indicating docs added and removed', async () => {
+    const dialog = document.createElement('copio-sync-dialog');
+    dialog.syncState = {
+      step: 'done',
+      added: 2,
+      removed: 1,
+    };
+    document.body.appendChild(dialog);
+    await dialog.updateComplete;
+
+    expect(dialog.textContent).to.include('Sync complete — 2 docs added, 1 doc removed.');
+
+    dialog.syncState = {
+      step: 'done',
+      added: 0,
+      removed: 3,
+    };
+    dialog.requestUpdate();
+    await dialog.updateComplete;
+    expect(dialog.textContent).to.include('Sync complete — 3 docs removed.');
+
+    dialog.syncState = {
+      step: 'done',
+      added: 1,
+      removed: 0,
+    };
+    dialog.requestUpdate();
+    await dialog.updateComplete;
+    expect(dialog.textContent).to.include('Sync complete — 1 doc added.');
+
+    dialog.syncState = {
+      step: 'done',
+      added: 0,
+      removed: 0,
+    };
+    dialog.requestUpdate();
+    await dialog.updateComplete;
+    expect(dialog.textContent).to.include('Sync complete — up to date.');
+
+    dialog.remove();
   });
 });
