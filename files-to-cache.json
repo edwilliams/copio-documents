@@ -23,6 +23,7 @@
   "js/adapters/pdf/pdfkit-adapter.js",
   "js/adapters/storage/index.js",
   "js/adapters/storage/indexeddb-adapter.js",
+  "js/adapters/storage/indexeddb-persister.js",
   "js/adapters/storage/memory-adapter.js",
   "js/adapters/storage/storage-port.js",
   "js/components/copio-app.js",

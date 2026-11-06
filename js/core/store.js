@@ -1,9 +1,9 @@
-import { createStore } from '../lib/tinybase.6.5.2.js';
-import { createIndexedDbPersister } from '../lib/tinybase-persister-indexed-db.js';
+import { createMergeableStore } from '../lib/tinybase.6.5.2.js';
+import { createMergeableIndexedDbPersister } from '../adapters/storage/indexeddb-persister.js';
 
-export const store = createStore();
+export const store = createMergeableStore();
 store.setTable('docs', {});
 
-export const persister = createIndexedDbPersister(store, 'copio-db');
+export const persister = createMergeableIndexedDbPersister(store, 'copio-db');
 persister.startAutoLoad();
 persister.startAutoSave();

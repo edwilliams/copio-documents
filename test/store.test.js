@@ -2,8 +2,9 @@ import { expect } from '@esm-bundle/chai';
 import { store } from '../js/core/store.js';
 
 describe('store.js', () => {
-  it('should initialize with docs table', () => {
+  it('should initialize with docs table and mergeable capabilities', () => {
     expect(store).to.exist;
+    expect(typeof store.isMergeable === 'function' && store.isMergeable()).to.be.true;
     const docs = store.getTable('docs');
     expect(docs).to.be.an('object');
   });

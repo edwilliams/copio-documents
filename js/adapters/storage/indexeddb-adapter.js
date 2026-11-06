@@ -1,7 +1,7 @@
 import { StoragePort } from './storage-port.js';
 import { store as defaultStore, persister as defaultPersister } from '../../core/store.js';
-import { createStore } from '../../lib/tinybase.6.5.2.js';
-import { createIndexedDbPersister } from '../../lib/tinybase-persister-indexed-db.js';
+import { createMergeableStore } from '../../lib/tinybase.6.5.2.js';
+import { createMergeableIndexedDbPersister } from './indexeddb-persister.js';
 
 /**
  * IndexedDbStorageAdapter — TinyBase IndexedDB implementation of StoragePort (CPO-033).
@@ -26,9 +26,9 @@ export class IndexedDbStorageAdapter extends StoragePort {
 
     if (options.dbName && options.dbName !== 'copio-db') {
       this.#dbName = options.dbName;
-      this.#store = options.store || createStore();
+      this.#store = options.store || createMergeableStore();
       this.#store.setTable('docs', {});
-      this.#persister = options.persister || createIndexedDbPersister(this.#store, this.#dbName);
+      this.#persister = options.persister || createMergeableIndexedDbPersister(this.#store, this.#dbName);
       this.#isCustom = true;
     } else {
       this.#store = options.store || defaultStore;

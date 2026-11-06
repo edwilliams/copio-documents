@@ -1,5 +1,5 @@
 import { expect } from '@esm-bundle/chai';
-import { createStore } from '../js/lib/tinybase.6.5.2.js';
+import { createStore, createMergeableStore } from '../js/lib/tinybase.6.5.2.js';
 import { SyncManager } from '../js/services/sync-service.js';
 import '../js/routes/sync/copio-sync-dialog.js';
 import '../js/components/copio-app.js';
@@ -78,6 +78,90 @@ describe('SyncManager P2P', function () {
     expect(storeJoiner.hasRow('docs', 'doc1')).to.be.true;
 
     // Clean up
+    hostManager.close();
+    joinerManager.close();
+  });
+
+  it('should propagate document deletions using createMergeableStore', async () => {
+    const storeHost = createMergeableStore('host');
+    const storeJoiner = createMergeableStore('joiner');
+
+    // Both stores start with shared doc1
+    storeHost.setTable('docs', {
+      doc1: { name: 'Shared Doc', pages: '[]' },
+      doc2: { name: 'Keep Doc', pages: '[]' },
+    });
+    storeJoiner.merge(storeHost);
+    expect(storeJoiner.hasRow('docs', 'doc1')).to.be.true;
+
+    // Joiner deletes doc1 locally
+    storeJoiner.delRow('docs', 'doc1');
+    expect(storeJoiner.hasRow('docs', 'doc1')).to.be.false;
+
+    // Host adds a new document concurrently
+    storeHost.setRow('docs', 'doc3', { name: 'New Host Doc', pages: '[]' });
+
+    let hostState = null;
+    let joinerState = null;
+
+    const hostManager = new SyncManager(storeHost, (state) => {
+      hostState = state;
+    });
+
+    const joinerManager = new SyncManager(storeJoiner, (state) => {
+      joinerState = state;
+    });
+
+    hostManager.startHost();
+
+    // Wait for host to get ID
+    await new Promise((resolve, reject) => {
+      const interval = setInterval(() => {
+        if (hostState?.step === 'waiting') {
+          clearInterval(interval);
+          resolve();
+        } else if (hostState?.step === 'error') {
+          clearInterval(interval);
+          reject(new Error(hostState.message));
+        }
+      }, 100);
+    });
+
+    const hostPeerId = hostState.peerId;
+    joinerManager.startJoiner(hostPeerId);
+
+    // Wait for sync completion
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error(`Timeout waiting for sync. Host: ${hostState?.step}, Joiner: ${joinerState?.step}`));
+      }, 15000);
+
+      const interval = setInterval(() => {
+        if (hostState?.step === 'error' || joinerState?.step === 'error') {
+          clearInterval(interval);
+          clearTimeout(timeout);
+          reject(new Error(`Host error: ${hostState?.message}, Joiner error: ${joinerState?.message}`));
+        } else if (hostState?.step === 'done' && joinerState?.step === 'done') {
+          clearInterval(interval);
+          clearTimeout(timeout);
+          resolve();
+        }
+      }, 100);
+    });
+
+    // Verification:
+    // doc1 was deleted by Joiner, so it MUST be deleted on Host too (no resurrection!)
+    expect(storeHost.hasRow('docs', 'doc1')).to.be.false;
+    expect(storeJoiner.hasRow('docs', 'doc1')).to.be.false;
+
+    // doc2 was kept by both
+    expect(storeHost.hasRow('docs', 'doc2')).to.be.true;
+    expect(storeJoiner.hasRow('docs', 'doc2')).to.be.true;
+
+    // doc3 was added by Host, so Joiner receives it
+    expect(storeHost.hasRow('docs', 'doc3')).to.be.true;
+    expect(storeJoiner.hasRow('docs', 'doc3')).to.be.true;
+
     hostManager.close();
     joinerManager.close();
   });
