@@ -9,7 +9,7 @@
     "check:ci": "npm run lint && npm test"
   },
   "devDependencies": {
-    "@copio/sdk": "^0.1.2",
+    "@copio/sdk": "^0.1.6",
     "@esm-bundle/chai": "^4.3.4-fix.0",
     "@web/test-runner": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",

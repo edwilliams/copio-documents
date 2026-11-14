@@ -7,7 +7,7 @@ import '../routes/doc/copio-carousel.js';
 import '../routes/ocr/copio-doc-ocr-dialog.js';
 import '../routes/sync/copio-sync-dialog.js';
 import '../routes/add-edit/copio-add-edit-dialog.js';
-import '../../vendor/copio.0.1.2.js';
+import '../../vendor/copio.0.1.6.js';
 
 // =============================================
 // Show UI when custom components are ready
