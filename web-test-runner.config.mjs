@@ -13,7 +13,7 @@ export default {
     {
       name: 'resolve-node-builtins',
       resolveImport({ source }) {
-        if (['fs', 'path', 'http', 'https', 'url', 'stream', 'zlib', 'canvas', 'path2d'].includes(source)) {
+        if (['fs', 'path', 'http', 'https', 'url', 'stream', 'zlib', 'canvas', 'path2d', 'module', 'worker_threads'].includes(source)) {
           return '/test/mocks/empty-module.js';
         }
       },
