@@ -1,8 +1,8 @@
 import { expect } from '@esm-bundle/chai';
-import '../vendor/copio.0.1.6.js';
+import '../vendor/copio.0.1.7.js';
 
 describe('Copio Documents — Vendor SDK Integration', () => {
-  it('registers <copio-scanner> custom element from vendor/copio.0.1.6.js', () => {
+  it('registers <copio-scanner> custom element from vendor/copio.0.1.7.js', () => {
     expect(customElements.get('copio-scanner')).to.be.a('function');
   });
 
