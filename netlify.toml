@@ -1,3 +1,7 @@
+[build]
+  command = "npm run postinstall"
+  publish = "."
+
 [build.environment]
   GIT_SUBMODULE_STRATEGY = "none"
 

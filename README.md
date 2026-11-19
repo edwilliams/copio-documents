@@ -103,7 +103,7 @@ copio-documents/
 │   ├── adapters/               # Driven ports: Storage (IndexedDB, Memory), OCR, PDF, Sync
 │   ├── services/               # Headless domain services (DocRepository, SyncService, OcrService)
 │   └── core/                   # Store, hash router, component registry
-└── vendor/                     # Vendored @copio/sdk runtime bundle (vendor/copio.0.1.8.js)
+└── vendor/                     # @copio/sdk dist/ copied via postinstall (vendor/copio-sdk/)
 ```
 
 ### Key Architectural Principles

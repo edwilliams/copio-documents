@@ -2,7 +2,6 @@
 import { LitElement, html } from '../../lib/lit-core.min.js';
 import { randomId } from '../../utils/utils.js';
 import { notify } from '../../services/notify.js';
-import { ScanicWasmEdgeAdapter } from '../../adapters/edge/scanic-wasm-adapter.js';
 
 export class CopioAddEditDialog extends LitElement {
   #scannerInitialized = false;
@@ -25,10 +24,6 @@ export class CopioAddEditDialog extends LitElement {
     if (this.#scannerInitialized) return;
     const scanner = this.querySelector('copio-scanner');
     if (!scanner) return;
-
-    if (scanner.engine && typeof scanner.engine.setService === 'function') {
-      scanner.engine.setService('edge', new ScanicWasmEdgeAdapter());
-    }
 
     scanner.addEventListener('copio:scan-complete', (e) => {
       const detail = e.detail || {};

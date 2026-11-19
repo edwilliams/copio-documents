@@ -1,9 +1,10 @@
 import { expect } from '@esm-bundle/chai';
-import '../vendor/copio.0.1.8.js';
-import { ScanicWasmEdgeAdapter } from '../js/adapters/edge/scanic-wasm-adapter.js';
+import { setAssetBase } from '../vendor/copio-sdk/cdn.js';
+
+setAssetBase(new URL('../vendor/copio-sdk/', import.meta.url).href);
 
 describe('Copio Documents — Vendor SDK Integration', () => {
-  it('registers <copio-scanner> custom element from vendor/copio.0.1.8.js', () => {
+  it('registers <copio-scanner> custom element from vendor/copio-sdk/cdn.js', () => {
     expect(customElements.get('copio-scanner')).to.be.a('function');
   });
 
@@ -15,12 +16,11 @@ describe('Copio Documents — Vendor SDK Integration', () => {
     document.body.removeChild(scanner);
   });
 
-  it('registers ScanicWasmEdgeAdapter for live viewfinder edge detection', async function () {
+  it('registers ScanicWasmEdgeAdapter out of the box for live viewfinder edge detection', async function () {
     this.timeout(15000);
     const scanner = document.createElement('copio-scanner');
     document.body.appendChild(scanner);
 
-    scanner.engine.setService('edge', new ScanicWasmEdgeAdapter());
     expect(scanner.engine.edgeDetector).to.exist;
 
     const canvas = document.createElement('canvas');
