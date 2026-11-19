@@ -1,9 +1,9 @@
 import { expect } from '@esm-bundle/chai';
-import '../vendor/copio.0.1.7.js';
+import '../vendor/copio.0.1.8.js';
 import { ScanicWasmEdgeAdapter } from '../js/adapters/edge/scanic-wasm-adapter.js';
 
 describe('Copio Documents — Vendor SDK Integration', () => {
-  it('registers <copio-scanner> custom element from vendor/copio.0.1.7.js', () => {
+  it('registers <copio-scanner> custom element from vendor/copio.0.1.8.js', () => {
     expect(customElements.get('copio-scanner')).to.be.a('function');
   });
 

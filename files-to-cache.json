@@ -70,7 +70,7 @@
   "js/utils/module-loader.js",
   "js/utils/pdf-utils.js",
   "js/utils/utils.js",
-  "vendor/copio.0.1.7.js",
+  "vendor/copio.0.1.8.js",
   "fonts/mont/regular.woff2",
   "fonts/mont/semibold.woff2",
   "assets/icons/arrow-clockwise.svg",
