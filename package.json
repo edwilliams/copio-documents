@@ -4,7 +4,7 @@
   "description": "Copio Documents — The Private, Offline-First Document Scanner & Manager.",
   "type": "module",
   "scripts": {
-    "postinstall": "rm -rf vendor/copio-sdk && cp -r node_modules/@copio/sdk/dist vendor/copio-sdk",
+    "postinstall": "rm -rf vendor/copio-sdk && mkdir -p vendor && cp -r node_modules/@copio/sdk/dist vendor/copio-sdk",
     "lint": "oxlint",
     "test": "web-test-runner test/**/*.test.js --node-resolve",
     "check:ci": "npm run lint && npm test"
